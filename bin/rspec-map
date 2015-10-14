@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+
+require "coverage.so"
+require 'rspec'
+
+RSpec.configure do |config|
+
+  config.around(:example) do |example|
+    pid = fork do
+      Coverage.start
+      example.call
+      coverage =  Coverage.result
+      pwd = Dir.pwd
+      project_files = coverage.keys.select do |filename|
+        filename.start_with?(pwd)
+      end.reject do |filename|
+        filename.start_with?("#{pwd}/spec")
+      end
+      require 'pry'; binding.pry;
+    end
+    Process.wait(pid)
+  end
+
+end
+
+require "#{Dir.pwd}/spec/spec_helper"
+
+RSpec::Core::Runner.run(ARGV, STDERR, STDOUT)
+
